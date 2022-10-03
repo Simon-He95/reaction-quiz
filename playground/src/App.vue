@@ -2,7 +2,9 @@
 import { onMounted } from "@vue/runtime-core";
 import {
   addEventListener,
+  animationFrameWrapper,
   createElement,
+  insertElement,
   useIntersectionObserver,
 } from "simon-js-tool";
 const props = defineProps<{ modelValue: boolean }>();
@@ -18,17 +20,27 @@ addEventListener(document, "mousemove", (e) => {
 const w = window.innerWidth;
 const h = window.innerHeight;
 function generateObject() {
-  const div = createElement("div");
+  const random = Math.floor(Math.random() * 4);
+  const div = createElement("div", {
+    style: "background:red",
+  });
   const width = div.offsetWidth;
   const height = div.offsetHeight;
   const randomWidth = Math.random() * (w + 2 * width) - width;
   const randomHeight = Math.random() * (h + 2 * height) - h;
+  console.log("----", width, div, "----");
   const start = {
-    0: `style:"top:${-height};left:${randomWidth}"`,
-    1: `style:"top:${height + h};left:${randomWidth}"`,
-    2: `style:"left:${-width};top:${randomHeight}`,
-    3: `style:"left:${width + w};top:${randomHeight}`,
+    0: `top:${-height}px;left:${randomWidth}px;background:red;width:10px;height:10px;position:absolute;`,
+    1: `top:${
+      height + h
+    }px;left:${randomWidth}px;background:red;width:10px;height:10px;position:absolute;`,
+    2: `left:${-width}px;top:${randomHeight}px;background:red;width:10px;height:10px;position:absolute;`,
+    3: `left:${
+      width + w
+    }px;top:${randomHeight}px;background:red;width:10px;height:10px;position:absolute;`,
   };
+  // div.style = div.style + start[random];
+  div.setAttribute("style", start[random]);
   // top.value + height / ? = randomWidth-left.value /randomWidth+width
   // left.value-randomWidth/w-randomWidth+width = top.value / ?
   // 0: if(randomWidth > left.value) top.value + height / ? = randomWidth-left.value / randomWidth+width
@@ -39,7 +51,7 @@ function generateObject() {
   // or top.value-randomHeight / h+height-randomHeight = left.value+width/?
   // 3: if(randomHeight>top.value)  w+width-left.value / ? = randomHeight-top.value / randomHeight + height
   // or w+width-left.value/? = top.value-randomHeight/  h+height-randomHeight
-  function getEndPosition() {
+  function getEndPosition(random) {
     const end = {
       0:
         randomWidth > left.value
@@ -100,10 +112,32 @@ function generateObject() {
               h + height,
             ],
     };
+    return end[random];
   }
-  const [l, t] = getEndPosition();
-  console.log(start[0], left.value, top.value, "---", l, t);
+  function getStartPosition(random) {
+    const start = {
+      0: [randomWidth, -height],
+      1: [randomWidth, height + h],
+      2: [-width, randomHeight],
+      3: [width + w, randomHeight],
+    };
+    return start[random];
+  }
+  let [lat1, lng1] = getStartPosition(random);
+  const [lat2, lng2] = getEndPosition(random);
+  const distanceX = lat2 - lat1;
+  const distanceY = lng2 - lng1;
+  const stop = animationFrameWrapper(() => {
+    if (Math.floor(lat1) === Math.floor(lat2)) return stop();
+
+    lat1 += distanceX / 100;
+    lng1 += distanceY / 100;
+    div.style.left = `${lat1}px`;
+    div.style.top = `${lng1}px`;
+  }, 100);
+  insertElement("main", div, null);
 }
+
 onMounted(() => {
   setTimeout(() => {
     generateObject();
@@ -112,7 +146,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main font-sans p="x-4 y-10" text="center gray-700 dark:gray-200">
+  <main font-sans p="x-4 y-10" h-full text="center gray-700 dark:gray-200">
     <div
       w-10
       h-10
