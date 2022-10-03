@@ -26,16 +26,19 @@ function generateObject() {
   const start = {
     0: `style:"top:${-height};left:${randomWidth}"`,
     1: `style:"top:${height + h};left:${randomWidth}"`,
-    2: `style:"left:${width};top:${randomHeight}`,
+    2: `style:"left:${-width};top:${randomHeight}`,
     3: `style:"left:${width + w};top:${randomHeight}`,
   };
   // top.value + height / ? = randomWidth-left.value /randomWidth+width
   // left.value-randomWidth/w-randomWidth+width = top.value / ?
   // 0: if(randomWidth > left.value) top.value + height / ? = randomWidth-left.value / randomWidth+width
-  // or top.value+height / ? = left.value-randomWidth / w+width-randomWidth
-  // 1: if(randomWidth > left.value) w-randomWidth / ? = h+height-top.value / h+2*height
-  // or left.value - randomWidth / ? = (h+height-top.value) / (h+2*height)
-
+  // or h+height-top.value / h+2*height = left/value-randomWidth/?
+  // 1: if(randomWidth > left.value) h+height-top.value / ? = randomWidth-left.value/randomWidth+width
+  // or left.value-randomWidth/? = h+height-top.value/h+2*height
+  // 2 : if(randomHeight>top.value) left.value + width/? = randomHeight-top.value/randomHeight+height
+  // or top.value-randomHeight / h+height-randomHeight = left.value+width/?
+  // 3: if(randomHeight>top.value)  w+width-left.value / ? = randomHeight-top.value / randomHeight + height
+  // or w+width-left.value/? = top.value-randomHeight/  h+height-randomHeight
   function getEndPosition() {
     const end = {
       0:
@@ -47,24 +50,54 @@ function generateObject() {
                 height,
             ]
           : [
-              w + width,
-              ((top.value + height) * (w - randomWidth + width)) /
-                (left.value - randomWidth) -
-                height,
+              (randomWidth + (randomWidth + width) * (top.value + height)) /
+                (randomWidth - left.value),
+              height + h,
             ],
       1:
         randomWidth > left.value
           ? [
-              -height,
-              ((h + 2 * height) * (w - randomWidth)) /
-                (h + height - top.value) -
-                (w - randomWidth),
+              -width,
+              h +
+                height -
+                ((randomWidth + width) * (h + height - top.value)) /
+                  (randomWidth - left.value),
             ]
           : [
+              randomWidth +
+                ((h + 2 * height) * (left.value - randomWidth)) /
+                  (h + height - top.value),
               -height,
-              ((h + 2 * height) * (left.value - randomWidth)) /
-                (h + height - top.value) +
-                randomWidth,
+            ],
+      2:
+        randomHeight > top.value
+          ? [
+              ((randomHeight + height) * (left.value + width)) /
+                (randomHeight - top.value) -
+                width,
+              -height,
+            ]
+          : [
+              ((h + height - randomHeight) * (left.value + width)) /
+                (top.value - randomHeight) -
+                width,
+              height + h,
+            ],
+      3:
+        randomHeight > top.value
+          ? [
+              width +
+                w -
+                ((randomHeight + height) * (w + width - left.value)) /
+                  (randomHeight - top.value),
+              -height,
+            ]
+          : [
+              w +
+                width -
+                ((h + height - randomHeight) * (w + width - left.value)) /
+                  (top.value - randomHeight),
+              h + height,
             ],
     };
   }
