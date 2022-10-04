@@ -5,11 +5,14 @@ import {
   animationFrameWrapper,
   createElement,
   insertElement,
+  removeElement,
 } from "simon-js-tool";
 const props = defineProps<{ modelValue: boolean }>();
 const top = ref(0);
 const left = ref(0);
-
+let over;
+let status = ref(true);
+const times = ref(0);
 const blood = ref(60);
 
 // to do 检测物体对于x轴和y轴的垂线同时重叠证明碰撞
@@ -21,6 +24,9 @@ addEventListener(document, "mousemove", (e) => {
 const w = window.innerWidth;
 const h = window.innerHeight;
 function generateObject() {
+  times.value++;
+  if (times.value > 100) level.value++;
+  if (blood.value < 100) blood.value += 1;
   const random = Math.floor(Math.random() * 4);
   const div = createElement("div", {
     style: "background:red",
@@ -40,6 +46,7 @@ function generateObject() {
       width + w
     }px;top:${randomHeight}px;background:red;width:10px;height:10px;position:absolute;`,
   };
+  const level = ref(1);
   // div.style = div.style + start[random];
   div.setAttribute("style", start[random]);
   // top.value + height / ? = randomWidth-left.value /randomWidth+width
@@ -129,26 +136,37 @@ function generateObject() {
   const distanceX = lat2 - lat1;
   const distanceY = lng2 - lng1;
   const stop = animationFrameWrapper(() => {
-    console.log(collisionDetection(div, ".target"));
+    if (!status.value) return stop();
     if (collisionDetection(div, ".target")) {
       // 掉血
       blood.value -= 20;
+      if (blood.value <= 0) {
+        status.value = false;
+        setTimeout(() => {
+          alert("game over");
+          over();
+        });
+      }
+      removeElement(div);
       return stop();
     }
-    if (Math.floor(lat1) === Math.floor(lat2)) return stop();
+    if (Math.floor(lat1) === Math.floor(lat2)) {
+      removeElement(div);
+      return stop();
+    }
 
     lat1 += distanceX / 100;
     lng1 += distanceY / 100;
     div.style.left = `${lat1}px`;
     div.style.top = `${lng1}px`;
-  }, 100);
+  }, 100 / level.value);
   insertElement("main", div, null);
 }
 
 onMounted(() => {
-  setTimeout(() => {
+  over = animationFrameWrapper(() => {
     generateObject();
-  }, 1000);
+  }, 1500);
 });
 
 function isStr(o: any): o is string {
@@ -186,9 +204,23 @@ const bloodColor = computed(() => {
 
 <template>
   <main font-sans p="x-4 y-10" h-full text="center gray-700 dark:gray-200">
-    <div w-100 border-1 border-lightgray border-rd-2 h-10>
-      <div :class="[bloodColor]" :style="{ width: blood + '%' }" h-full></div>
+    <div w-100 border-1 border-lightgray border-rd-2 h-2 relative ma>
+      <div
+        :class="[bloodColor]"
+        :style="{ width: (blood <= 0 ? 0 : blood) + '%' }"
+        h-full
+        text-center
+        color-white
+        absolute
+        flex
+        items-center
+        justify-center
+      >
+        {{ blood }}
+      </div>
     </div>
+    <span mt1 ma>{{ times }}</span>
+
     <div
       w-10
       h-10
