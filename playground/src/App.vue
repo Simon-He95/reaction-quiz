@@ -1,213 +1,175 @@
 <script setup lang="ts">
-import { onMounted } from "@vue/runtime-core";
+import { onMounted } from '@vue/runtime-core'
 import {
   addEventListener,
   animationFrameWrapper,
+  collisionDetection,
   createElement,
   insertElement,
+  randomRgb,
   removeElement,
-} from "simon-js-tool";
-const props = defineProps<{ modelValue: boolean }>();
-const top = ref(0);
-const left = ref(0);
-let over;
-let status = ref(true);
-const times = ref(0);
-const blood = ref(60);
+} from 'simon-js-tool'
+const top = ref(0)
+const left = ref(0)
+let over
+const status = ref(true)
+const times = ref(0)
+const blood = ref(100)
+const level = ref(1)
 
-// to do 检测物体对于x轴和y轴的垂线同时重叠证明碰撞
-
-addEventListener(document, "mousemove", (e) => {
-  top.value = e.y;
-  left.value = e.x;
-});
-const w = window.innerWidth;
-const h = window.innerHeight;
+const target = ref(null)
+addEventListener(document, 'mousemove', (e) => {
+  top.value = e.y - target.value?.offsetWidth / 2
+  left.value = e.x - target.value?.offsetHeight / 2
+})
+const w = window.innerWidth
+const h = window.innerHeight
 function generateObject() {
-  times.value++;
-  if (times.value > 100) level.value++;
-  if (blood.value < 100) blood.value += 1;
-  const random = Math.floor(Math.random() * 4);
-  const div = createElement("div", {
-    style: "background:red",
-  });
-  const width = div.offsetWidth;
-  const height = div.offsetHeight;
-  const randomWidth = Math.random() * (w + 2 * width) - width;
-  const randomHeight = Math.random() * (h + 2 * height) - h;
-  console.log("----", width, div, "----");
-  const start = {
-    0: `top:${-height}px;left:${randomWidth}px;background:red;width:10px;height:10px;position:absolute;`,
-    1: `top:${
-      height + h
-    }px;left:${randomWidth}px;background:red;width:10px;height:10px;position:absolute;`,
-    2: `left:${-width}px;top:${randomHeight}px;background:red;width:10px;height:10px;position:absolute;`,
-    3: `left:${
-      width + w
-    }px;top:${randomHeight}px;background:red;width:10px;height:10px;position:absolute;`,
-  };
-  const level = ref(1);
-  // div.style = div.style + start[random];
-  div.setAttribute("style", start[random]);
-  // top.value + height / ? = randomWidth-left.value /randomWidth+width
-  // left.value-randomWidth/w-randomWidth+width = top.value / ?
-  // 0: if(randomWidth > left.value) top.value + height / ? = randomWidth-left.value / randomWidth+width
-  // or h+height-top.value / h+2*height = left/value-randomWidth/?
-  // 1: if(randomWidth > left.value) h+height-top.value / ? = randomWidth-left.value/randomWidth+width
-  // or left.value-randomWidth/? = h+height-top.value/h+2*height
-  // 2 : if(randomHeight>top.value) left.value + width/? = randomHeight-top.value/randomHeight+height
-  // or top.value-randomHeight / h+height-randomHeight = left.value+width/?
-  // 3: if(randomHeight>top.value)  w+width-left.value / ? = randomHeight-top.value / randomHeight + height
-  // or w+width-left.value/? = top.value-randomHeight/  h+height-randomHeight
-  function getEndPosition(random) {
-    const end = {
+  times.value++
+  if (times.value > 60)
+    level.value++
+  if (blood.value < 100)
+    blood.value += 1
+  const random: number = Math.floor(Math.random() * 4)
+  const div = createElement('div')
+  const width = div.offsetWidth
+  const height = div.offsetHeight
+  const randomWidth = Math.random() * (w + 2 * width) - width
+  const randomHeight = Math.random() * (h + 2 * height) - h
+  const randomBlockW = Math.random() * 10 + 10
+  const randomBlockH = Math.random() * 10 + 10
+  const radius = Math.random() * 100
+  let [lat1, lng1] = getStartPosition(random)
+  const initialStatus = `left:${lat1}px;top:${lng1}px;background:${randomRgb()};width:${randomBlockW}px;height:${randomBlockH}px;position:absolute;border-radius:${radius}%;`
+  div.setAttribute('style', initialStatus)
+  function getEndPosition(random: number): number[] {
+    const end: Record<number, number[]> = {
       0:
         randomWidth > left.value
           ? [
               -width,
-              ((top.value + height) * (randomWidth + width)) /
-                (randomWidth - left.value) -
-                height,
+              ((top.value + height) * (randomWidth + width))
+                / (randomWidth - left.value)
+                - height,
             ]
           : [
-              (randomWidth + (randomWidth + width) * (top.value + height)) /
-                (randomWidth - left.value),
+              (randomWidth + (randomWidth + width) * (top.value + height))
+                / (randomWidth - left.value),
               height + h,
             ],
       1:
         randomWidth > left.value
           ? [
               -width,
-              h +
-                height -
-                ((randomWidth + width) * (h + height - top.value)) /
-                  (randomWidth - left.value),
+              h
+                + height
+                - ((randomWidth + width) * (h + height - top.value))
+                  / (randomWidth - left.value),
             ]
           : [
-              randomWidth +
-                ((h + 2 * height) * (left.value - randomWidth)) /
-                  (h + height - top.value),
+              randomWidth
+                + ((h + 2 * height) * (left.value - randomWidth))
+                  / (h + height - top.value),
               -height,
             ],
       2:
         randomHeight > top.value
           ? [
-              ((randomHeight + height) * (left.value + width)) /
-                (randomHeight - top.value) -
-                width,
+              ((randomHeight + height) * (left.value + width))
+                / (randomHeight - top.value)
+                - width,
               -height,
             ]
           : [
-              ((h + height - randomHeight) * (left.value + width)) /
-                (top.value - randomHeight) -
-                width,
+              ((h + height - randomHeight) * (left.value + width))
+                / (top.value - randomHeight)
+                - width,
               height + h,
             ],
       3:
         randomHeight > top.value
           ? [
-              width +
-                w -
-                ((randomHeight + height) * (w + width - left.value)) /
-                  (randomHeight - top.value),
+              width
+                + w
+                - ((randomHeight + height) * (w + width - left.value))
+                  / (randomHeight - top.value),
               -height,
             ]
           : [
-              w +
-                width -
-                ((h + height - randomHeight) * (w + width - left.value)) /
-                  (top.value - randomHeight),
+              w
+                + width
+                - ((h + height - randomHeight) * (w + width - left.value))
+                  / (top.value - randomHeight),
               h + height,
             ],
-    };
-    return end[random];
+    }
+    return end[random]
   }
-  function getStartPosition(random) {
-    const start = {
+  function getStartPosition(random: number): number[] {
+    const start: Record<number, number[]> = {
       0: [randomWidth, -height],
       1: [randomWidth, height + h],
       2: [-width, randomHeight],
       3: [width + w, randomHeight],
-    };
-    return start[random];
+    }
+    return start[random]
   }
-  let [lat1, lng1] = getStartPosition(random);
-  const [lat2, lng2] = getEndPosition(random);
-  const distanceX = lat2 - lat1;
-  const distanceY = lng2 - lng1;
+  const [lat2, lng2] = getEndPosition(random)
+  const distanceX = lat2 - lat1
+  const distanceY = lng2 - lng1
   const stop = animationFrameWrapper(() => {
-    if (!status.value) return stop();
-    if (collisionDetection(div, ".target")) {
-      // 掉血
-      blood.value -= 20;
+    if (!status.value)
+      return stop()
+    if (collisionDetection(div, '.target')) {
+      blood.value -= 20
       if (blood.value <= 0) {
-        status.value = false;
+        status.value = false
         setTimeout(() => {
-          alert("game over");
-          over();
-        });
+          alert(`game over ! lasted ${times.value} seconds`)
+          over()
+        })
       }
-      removeElement(div);
-      return stop();
+      removeElement(div)
+      return stop()
     }
     if (Math.floor(lat1) === Math.floor(lat2)) {
-      removeElement(div);
-      return stop();
+      removeElement(div)
+      return stop()
     }
 
-    lat1 += distanceX / 100;
-    lng1 += distanceY / 100;
-    div.style.left = `${lat1}px`;
-    div.style.top = `${lng1}px`;
-  }, 100 / level.value);
-  insertElement("main", div, null);
+    lat1 += distanceX / 100
+    lng1 += distanceY / 100
+    div.style.left = `${lat1}px`
+    div.style.top = `${lng1}px`
+  }, 100 / level.value)
+  insertElement('main', div, null)
 }
 
 onMounted(() => {
   over = animationFrameWrapper(() => {
-    generateObject();
-  }, 1500);
-});
+    generateObject()
+  }, 1500)
+})
 
 function isStr(o: any): o is string {
-  return typeof o === "string";
+  return typeof o === 'string'
 }
-function collisionDetection(
-  o1: string | HTMLElement,
-  o2: string | HTMLElement
-) {
-  const obj1: HTMLElement = isStr(o1) ? document.querySelector(o1)! : o1;
-  const obj2: HTMLElement = isStr(o2) ? document.querySelector(o2)! : o2;
-  if (!obj1 || !obj2) return;
-  const left1_start = obj1.offsetLeft;
-  const left1_end = obj1.offsetLeft + obj1.offsetWidth;
-  const left2_start = obj2.offsetLeft;
-  const left2_end = obj2.offsetLeft + obj2.offsetWidth;
-  const top1_start = obj1.offsetTop;
-  const top1_end = obj1.offsetTop + obj1.offsetHeight;
-  const top2_start = obj2.offsetTop;
-  const top2_end = obj2.offsetTop + obj2.offsetHeight;
-  // 判断是否碰撞
-  return !(
-    left1_start > left2_end ||
-    left1_end < left2_start ||
-    top1_start > top2_end ||
-    top1_end < top2_start
-  );
-}
+
 const bloodColor = computed(() => {
-  if (blood.value >= 80) return "bg-green";
-  if (blood.value >= 60) return "bg-yellow";
-  return "bg-red";
-});
+  if (blood.value >= 80)
+    return 'bg-green'
+  if (blood.value >= 60)
+    return 'bg-yellow'
+  return 'bg-red'
+})
 </script>
 
 <template>
   <main font-sans p="x-4 y-10" h-full text="center gray-700 dark:gray-200">
-    <div w-100 border-1 border-lightgray border-rd-2 h-2 relative ma>
+    <div w-100 border-1 border-lightgray border-rd-2 h-2 relative ma text-1>
       <div
         :class="[bloodColor]"
-        :style="{ width: (blood <= 0 ? 0 : blood) + '%' }"
+        :style="{ width: `${blood <= 0 ? 0 : blood}%` }"
         h-full
         text-center
         color-white
@@ -216,21 +178,24 @@ const bloodColor = computed(() => {
         items-center
         justify-center
       >
-        {{ blood }}
+        {{ blood }}%
       </div>
     </div>
-    <span mt1 ma>{{ times }}</span>
+    <span mt1 ma>{{ times }}s</span>
 
     <div
-      w-10
-      h-10
-      bg-red
+      ref="target"
       class="target"
       absolute
       :style="{ top: `${top}px`, left: `${left}px` }"
-    />
-    <div w-40 h-40 border-rd-full bg-yellow class="obj" />
-    <Footer />
+    >
+      <svg width="32" height="32" viewBox="0 0 256 256">
+        <path
+          fill="currentColor"
+          d="m214.8 136.9l-39.2-50.4a5.2 5.2 0 0 0-1-1.1A31.5 31.5 0 0 0 152 76a40 40 0 1 0-48 0a31.5 31.5 0 0 0-22.6 9.4a5.2 5.2 0 0 0-1 1.1l-39.2 50.4a24 24 0 0 0 33.9 33.9l3.8-2.9L63 218.1a23.5 23.5 0 0 0-.4 17.5a24 24 0 0 0 43.9 2.7l21.5-33.8l21.5 33.8a23.9 23.9 0 0 0 13.2 11.6a23.3 23.3 0 0 0 8.2 1.5a24 24 0 0 0 22.1-33.3l-15.9-50.2l3.8 2.9a24 24 0 0 0 33.9-33.9ZM128 28a16 16 0 1 1-16 16a16 16 0 0 1 16-16Zm68.1 124.3l-34.7-27.1a12 12 0 0 0-18.8 13.1l27.7 87.6l.6 1.5a10 10 0 0 0-.8-1.4l-32-50.4a12 12 0 0 0-20.2 0l-32 50.4a10 10 0 0 0-.8 1.4l.6-1.5l27.7-87.6a11.9 11.9 0 0 0-4.6-13.4a11.3 11.3 0 0 0-6.8-2.2a12.7 12.7 0 0 0-7.4 2.5l-34.7 27.1l-1.2 1l1-1.2l39.1-50.2a8.1 8.1 0 0 1 5.2-1.9h48a8.1 8.1 0 0 1 5.2 1.9l39.1 50.2l1 1.2Z"
+        />
+      </svg>
+    </div>
   </main>
 </template>
 
