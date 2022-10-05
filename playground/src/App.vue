@@ -5,10 +5,11 @@ import {
   animationFrameWrapper,
   collisionDetection,
   createElement,
+  findElement,
   insertElement,
-  randomRgb,
   removeElement,
 } from 'simon-js-tool'
+import { blocks } from './ball'
 const top = ref(0)
 const left = ref(0)
 let over
@@ -18,6 +19,7 @@ const blood = ref(100)
 const level = ref(1)
 
 const target = ref(null)
+
 addEventListener(document, 'mousemove', (e) => {
   top.value = e.y - target.value?.offsetWidth / 2
   left.value = e.x - target.value?.offsetHeight / 2
@@ -31,16 +33,17 @@ function generateObject() {
   if (blood.value < 100)
     blood.value += 1
   const random: number = Math.floor(Math.random() * 4)
-  const div = createElement('div')
+  const div = createElement('div', {
+    class: 'blocks',
+  })
+  const ball = blocks[Math.floor(Math.random() * blocks.length)]
+  div.innerHTML = ball
   const width = div.offsetWidth
   const height = div.offsetHeight
   const randomWidth = Math.random() * (w + 2 * width) - width
   const randomHeight = Math.random() * (h + 2 * height) - h
-  const randomBlockW = Math.random() * 10 + 10
-  const randomBlockH = Math.random() * 10 + 10
-  const radius = Math.random() * 100
   let [lat1, lng1] = getStartPosition(random)
-  const initialStatus = `left:${lat1}px;top:${lng1}px;background:${randomRgb()};width:${randomBlockW}px;height:${randomBlockH}px;position:absolute;border-radius:${radius}%;`
+  const initialStatus = `left:${lat1}px;top:${lng1}px;position:absolute;`
   div.setAttribute('style', initialStatus)
   function getEndPosition(random: number): number[] {
     const end: Record<number, number[]> = {
@@ -120,6 +123,19 @@ function generateObject() {
   const stop = animationFrameWrapper(() => {
     if (!status.value)
       return stop()
+    if (Math.floor(lat1) === Math.floor(lat2)) {
+      removeElement(div)
+      return stop()
+    }
+
+    lat1 += distanceX / 100
+    lng1 += distanceY / 100
+    div.style.left = `${lat1}px`
+    div.style.top = `${lng1}px`
+  }, 100 / level.value)
+  const stop1 = animationFrameWrapper(() => {
+    if (!status.value)
+      return stop1()
     if (collisionDetection(div, '.target')) {
       blood.value -= 20
       if (blood.value <= 0) {
@@ -132,23 +148,17 @@ function generateObject() {
       removeElement(div)
       return stop()
     }
-    if (Math.floor(lat1) === Math.floor(lat2)) {
-      removeElement(div)
-      return stop()
-    }
+  }, 1)
 
-    lat1 += distanceX / 100
-    lng1 += distanceY / 100
-    div.style.left = `${lat1}px`
-    div.style.top = `${lng1}px`
-  }, 100 / level.value)
   insertElement('main', div, null)
 }
 
 onMounted(() => {
   over = animationFrameWrapper(() => {
-    generateObject()
-  }, 1500)
+    const len = findElement('.blocks', true).length
+    if (len <= 10)
+      generateObject()
+  }, 1000)
 })
 
 function isStr(o: any): o is string {
@@ -165,7 +175,13 @@ const bloodColor = computed(() => {
 </script>
 
 <template>
-  <main font-sans p="x-4 y-10" h-full text="center gray-700 dark:gray-200">
+  <main
+    ref="main"
+    font-sans
+    p="x-4 y-10"
+    h-full
+    text="center gray-700 dark:gray-200"
+  >
     <div w-100 border-1 border-lightgray border-rd-2 h-2 relative ma text-1>
       <div
         :class="[bloodColor]"
