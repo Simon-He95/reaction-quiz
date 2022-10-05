@@ -27,12 +27,7 @@ addEventListener(document, 'mousemove', (e) => {
 const w = window.innerWidth
 const h = window.innerHeight
 function generateObject() {
-  times.value++
-  if (times.value > 60)
-    level.value++
-  if (blood.value < 100)
-    blood.value += 1
-  const random: number = Math.floor(Math.random() * 4)
+  let random = 0
   const div = createElement('div', {
     class: 'blocks',
   })
@@ -40,8 +35,27 @@ function generateObject() {
   div.innerHTML = ball
   const width = div.offsetWidth
   const height = div.offsetHeight
-  const randomWidth = Math.random() * (w + 2 * width) - width
-  const randomHeight = Math.random() * (h + 2 * height) - h
+  const randomWidth = getRandomWidth()
+  const randomHeight = getRandomHeight()
+  if (left.value < w / 2) {
+    if (top.value < h / 2) {
+      if (Math.abs(left.value) > Math.abs(top.value))
+        random = 0
+      else
+        random = 2
+    }
+    else { random = Math.abs(left.value) > Math.abs(h - top.value) ? 1 : 2 }
+  }
+  else {
+    if (top.value < h / 2)
+      random = Math.abs(w - left.value) > Math.abs(top.value) ? 0 : 3
+    else random = Math.abs(w - left.value) > Math.abs(h - top.value) ? 1 : 3
+  }
+  times.value++
+  if (times.value > 60)
+    level.value++
+  if (blood.value < 100)
+    blood.value += 1
   let [lat1, lng1] = getStartPosition(random)
   const initialStatus = `left:${lat1}px;top:${lng1}px;position:absolute;`
   div.setAttribute('style', initialStatus)
@@ -151,6 +165,19 @@ function generateObject() {
   }, 1)
 
   insertElement('main', div, null)
+
+  function getRandomWidth() {
+    const result = Math.random() * (w + 2 * width) - width
+    if (result < 100)
+      return getRandomWidth()
+    return result
+  }
+  function getRandomHeight() {
+    const result = Math.random() * (h + 2 * height) - h
+    if (result < 100)
+      return getRandomWidth()
+    return result
+  }
 }
 
 onMounted(() => {
