@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from '@vue/runtime-core'
+import { onMounted } from "@vue/runtime-core";
 import {
   addEventListener,
   animationFrameWrapper,
@@ -8,119 +8,133 @@ import {
   findElement,
   insertElement,
   removeElement,
-} from 'simon-js-tool'
-import { blocks } from './ball'
-const top = ref(0)
-const left = ref(0)
-let over
-const status = ref(true)
-const times = ref(0)
-const blood = ref(100)
-const level = ref(1)
+  useIntersectionObserver,
+} from "simon-js-tool";
+import { blocks } from "./ball";
+const top = ref(0);
+const left = ref(0);
+let over;
+const status = ref(true);
+const times = ref(0);
+const blood = ref(100);
+const level = ref(1);
 
-const target = ref(null)
+const target = ref(null);
 
-addEventListener(document, 'mousemove', (e) => {
-  top.value = e.y - target.value?.offsetWidth / 2
-  left.value = e.x - target.value?.offsetHeight / 2
-})
-const w = window.innerWidth
-const h = window.innerHeight
+addEventListener(document, "mousemove", (e) => {
+  top.value = e.y - target.value?.offsetWidth / 2;
+  left.value = e.x - target.value?.offsetHeight / 2;
+});
+const w = window.innerWidth;
+const h = window.innerHeight;
 function generateObject() {
-  let random = 0
-  const div = createElement('div', {
-    class: 'blocks',
-  })
-  const ball = blocks[Math.floor(Math.random() * blocks.length)]
-  div.innerHTML = ball
-  const width = div.offsetWidth
-  const height = div.offsetHeight
-  const randomWidth = getRandomWidth()
-  const randomHeight = getRandomHeight()
+  let random = 0;
+  const div = createElement("div", {
+    class: "blocks",
+  });
+  const ball = blocks[Math.floor(Math.random() * blocks.length)];
+  div.innerHTML = ball;
+  const width = div.offsetWidth;
+  const height = div.offsetHeight;
+  const randomWidth = getRandomWidth();
+  const randomHeight = getRandomHeight();
   if (left.value < w / 2) {
     if (top.value < h / 2) {
-      if (Math.abs(left.value) > Math.abs(top.value))
-        random = 0
-      else
-        random = 2
+      if (Math.abs(left.value) > Math.abs(top.value)) random = 0;
+      else random = 2;
+    } else {
+      random = Math.abs(left.value) > Math.abs(h - top.value) ? 1 : 2;
     }
-    else { random = Math.abs(left.value) > Math.abs(h - top.value) ? 1 : 2 }
-  }
-  else {
+  } else {
     if (top.value < h / 2)
-      random = Math.abs(w - left.value) > Math.abs(top.value) ? 0 : 3
-    else random = Math.abs(w - left.value) > Math.abs(h - top.value) ? 1 : 3
+      random = Math.abs(w - left.value) > Math.abs(top.value) ? 0 : 3;
+    else random = Math.abs(w - left.value) > Math.abs(h - top.value) ? 1 : 3;
   }
-  times.value++
-  if (times.value > 60)
-    level.value++
-  if (blood.value < 100)
-    blood.value += 1
-  let [lat1, lng1] = getStartPosition(random)
-  const initialStatus = `left:${lat1}px;top:${lng1}px;position:absolute;`
-  div.setAttribute('style', initialStatus)
+  times.value++;
+  if (times.value > 60) level.value++;
+  if (blood.value < 100) blood.value += 1;
+  let [lat1, lng1] = getStartPosition(random);
+  const initialStatus = `left:${lat1}px;top:${lng1}px;position:absolute;`;
+  div.setAttribute("style", initialStatus);
   function getEndPosition(random: number): number[] {
     const end: Record<number, number[]> = {
       0:
         randomWidth > left.value
           ? [
               -width,
-              ((top.value + height) * (randomWidth + width))
-                / (randomWidth - left.value)
-                - height,
+              maxHeight(
+                ((top.value + height) * (randomWidth + width)) /
+                  (randomWidth - left.value) -
+                  height
+              ),
             ]
           : [
-              (randomWidth + (randomWidth + width) * (top.value + height))
-                / (randomWidth - left.value),
+              maxWidth(
+                randomWidth +
+                  ((randomWidth + width) * (top.value + height)) /
+                    (randomWidth - left.value)
+              ),
               height + h,
             ],
       1:
         randomWidth > left.value
           ? [
               -width,
-              h
-                + height
-                - ((randomWidth + width) * (h + height - top.value))
-                  / (randomWidth - left.value),
+              maxHeight(
+                h +
+                  height -
+                  ((randomWidth + width) * (h + height - top.value)) /
+                    (randomWidth - left.value)
+              ),
             ]
           : [
-              randomWidth
-                + ((h + 2 * height) * (left.value - randomWidth))
-                  / (h + height - top.value),
+              maxWidth(
+                randomWidth +
+                  ((h + 2 * height) * (left.value - randomWidth)) /
+                    (h + height - top.value)
+              ),
               -height,
             ],
       2:
         randomHeight > top.value
           ? [
-              ((randomHeight + height) * (left.value + width))
-                / (randomHeight - top.value)
-                - width,
+              maxWidth(
+                ((randomHeight + height) * (left.value + width)) /
+                  (randomHeight - top.value) -
+                  width
+              ),
               -height,
             ]
           : [
-              ((h + height - randomHeight) * (left.value + width))
-                / (top.value - randomHeight)
-                - width,
+              maxWidth(
+                ((h + height - randomHeight) * (left.value + width)) /
+                  (top.value - randomHeight) -
+                  width
+              ),
               height + h,
             ],
       3:
         randomHeight > top.value
           ? [
-              width
-                + w
-                - ((randomHeight + height) * (w + width - left.value))
-                  / (randomHeight - top.value),
+              maxWidth(
+                width +
+                  w -
+                  ((randomHeight + height) * (w + width - left.value)) /
+                    (randomHeight - top.value)
+              ),
               -height,
             ]
           : [
-              w
-                + width
-                - ((h + height - randomHeight) * (w + width - left.value))
-                  / (top.value - randomHeight),
+              maxWidth(
+                w +
+                  width -
+                  ((h + height - randomHeight) * (w + width - left.value)) /
+                    (top.value - randomHeight)
+              ),
               h + height,
             ],
-    }
-    return end[random]
+    };
+    return end[random];
   }
   function getStartPosition(random: number): number[] {
     const start: Record<number, number[]> = {
@@ -128,77 +142,74 @@ function generateObject() {
       1: [randomWidth, height + h],
       2: [-width, randomHeight],
       3: [width + w, randomHeight],
-    }
-    return start[random]
+    };
+    return start[random];
   }
-  const [lat2, lng2] = getEndPosition(random)
-  const distanceX = lat2 - lat1
-  const distanceY = lng2 - lng1
+
+  function maxHeight(data: number) {
+    return data > 0 ? Math.min(data, h + height) : Math.max(data, -height);
+  }
+  function maxWidth(data: number) {
+    return data > 0 ? Math.min(data, w + width) : Math.max(data, -width);
+  }
+  const [lat2, lng2] = getEndPosition(random);
+  const distanceX = lat2 - lat1;
+  const distanceY = lng2 - lng1;
+  useIntersectionObserver(div, ([{ isIntersecting }, observerElement]) => {
+    if (!observerElement) removeElement(div);
+  });
   const stop = animationFrameWrapper(() => {
-    if (!status.value)
-      return stop()
-    if (Math.floor(lat1) === Math.floor(lat2)) {
-      removeElement(div)
-      return stop()
-    }
-
-    lat1 += distanceX / 100
-    lng1 += distanceY / 100
-    div.style.left = `${lat1}px`
-    div.style.top = `${lng1}px`
-  }, 100 / level.value)
+    if (!status.value) return stop();
+    lat1 += distanceX / 100;
+    lng1 += distanceY / 100;
+    div.style.left = `${lat1}px`;
+    div.style.top = `${lng1}px`;
+  }, 100 / level.value);
   const stop1 = animationFrameWrapper(() => {
-    if (!status.value)
-      return stop1()
-    if (collisionDetection(div, '.target')) {
-      blood.value -= 20
+    if (!status.value) return stop1();
+    if (collisionDetection(div, ".target")) {
+      blood.value -= 20;
       if (blood.value <= 0) {
-        status.value = false
+        status.value = false;
         setTimeout(() => {
-          alert(`game over ! lasted ${times.value} seconds`)
-          over()
-        })
+          alert(`game over ! lasted ${times.value} seconds`);
+          over();
+        });
       }
-      removeElement(div)
-      return stop()
+      return stop();
     }
-  }, 1)
+  }, 0.01);
 
-  insertElement('main', div, null)
+  insertElement("main", div, null);
 
   function getRandomWidth() {
-    const result = Math.random() * (w + 2 * width) - width
-    if (result < 100)
-      return getRandomWidth()
-    return result
+    const result = Math.random() * (w + 2 * width) - width;
+    if (result < 100) return getRandomWidth();
+    return result;
   }
   function getRandomHeight() {
-    const result = Math.random() * (h + 2 * height) - h
-    if (result < 100)
-      return getRandomWidth()
-    return result
+    const result = Math.random() * (h + 2 * height) - h;
+    if (result < 100) return getRandomWidth();
+    return result;
   }
 }
 
 onMounted(() => {
   over = animationFrameWrapper(() => {
-    const len = findElement('.blocks', true).length
-    if (len <= 10)
-      generateObject()
-  }, 1000)
-})
+    const len = findElement(".blocks", true)!.length;
+    if (len <= 10) generateObject();
+  }, 1000);
+});
 
 function isStr(o: any): o is string {
-  return typeof o === 'string'
+  return typeof o === "string";
 }
 
 const bloodColor = computed(() => {
-  if (blood.value >= 80)
-    return 'bg-green'
-  if (blood.value >= 60)
-    return 'bg-yellow'
-  return 'bg-red'
-})
+  if (blood.value >= 80) return "bg-green";
+  if (blood.value >= 60) return "bg-yellow";
+  return "bg-red";
+});
 </script>
 
 <template>
