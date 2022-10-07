@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from "@vue/runtime-core";
+import { onMounted } from '@vue/runtime-core'
 import {
   addEventListener,
   animationFrameWrapper,
@@ -9,216 +9,238 @@ import {
   insertElement,
   removeElement,
   useIntersectionObserver,
-} from "simon-js-tool";
-import { blocks } from "./ball";
-const top = ref(0);
-const left = ref(0);
-let over;
-const status = ref(true);
-const times = ref(0);
-const blood = ref(100);
-const level = ref(1);
+} from 'simon-js-tool'
+import { computed, ref } from 'vue'
+import { blocks } from './ball'
+const top = ref(0)
+const left = ref(0)
+let over: () => void
+const status = ref(true)
+const times = ref(0)
+const blood = ref(100)
+const speed = ref(8)
 
-const target = ref(null);
-
-addEventListener(document, "mousemove", (e) => {
-  top.value = e.y - target.value?.offsetWidth / 2;
-  left.value = e.x - target.value?.offsetHeight / 2;
-});
-const w = window.innerWidth;
-const h = window.innerHeight;
+const target = ref<HTMLElement>()
+let start = false
+let timer: any = null
+const mousemove = (e: MouseEvent) => {
+  top.value = e.y - target.value!.offsetWidth / 2
+  left.value = e.x - target.value!.offsetHeight / 2
+  if (start)
+    return
+  start = true
+  over = animationFrameWrapper(() => {
+    const len = (findElement('.blocks', true) as NodeListOf<Element>).length
+    if (len <= 10)
+      generateObject()
+  }, 2000)
+  timer = setInterval(() => {
+    times.value++
+  }, 1000)
+}
+addEventListener(document, 'mousemove', mousemove)
+const w = window.innerWidth
+const h = window.innerHeight
 function generateObject() {
-  let random = 0;
-  const div = createElement("div", {
-    class: "blocks",
-  });
-  const ball = blocks[Math.floor(Math.random() * blocks.length)];
-  div.innerHTML = ball;
-  const width = div.offsetWidth;
-  const height = div.offsetHeight;
-  const randomWidth = getRandomWidth();
-  const randomHeight = getRandomHeight();
+  let random = 0
+  const div = createElement('div', {
+    class: 'blocks',
+  })
+  const ball = blocks[Math.floor(Math.random() * blocks.length)]
+  div.innerHTML = ball
+  const width = 32
+  const height = 32
+  const randomWidth = getRandomWidth() + width / 2
+  const randomHeight = getRandomHeight() + height / 2
   if (left.value < w / 2) {
     if (top.value < h / 2) {
-      if (Math.abs(left.value) > Math.abs(top.value)) random = 0;
-      else random = 2;
-    } else {
-      random = Math.abs(left.value) > Math.abs(h - top.value) ? 1 : 2;
+      if (Math.abs(left.value) > Math.abs(top.value))
+        random = 0
+      else random = 2
     }
-  } else {
+    else {
+      random = Math.abs(left.value) > Math.abs(h - top.value) ? 1 : 2
+    }
+  }
+  else {
     if (top.value < h / 2)
-      random = Math.abs(w - left.value) > Math.abs(top.value) ? 0 : 3;
-    else random = Math.abs(w - left.value) > Math.abs(h - top.value) ? 1 : 3;
+      random = Math.abs(w - left.value) > Math.abs(top.value) ? 0 : 3
+    else random = Math.abs(w - left.value) > Math.abs(h - top.value) ? 1 : 3
   }
-  times.value++;
-  if (times.value > 60) level.value++;
-  if (blood.value < 100) blood.value += 1;
-  let [lat1, lng1] = getStartPosition(random);
-  const initialStatus = `left:${lat1}px;top:${lng1}px;position:absolute;`;
-  div.setAttribute("style", initialStatus);
-  function getEndPosition(random: number): number[] {
-    const end: Record<number, number[]> = {
-      0:
-        randomWidth > left.value
-          ? [
-              -width,
-              maxHeight(
-                ((top.value + height) * (randomWidth + width)) /
-                  (randomWidth - left.value) -
-                  height
-              ),
-            ]
-          : [
-              maxWidth(
-                randomWidth +
-                  ((randomWidth + width) * (top.value + height)) /
-                    (randomWidth - left.value)
-              ),
-              height + h,
-            ],
-      1:
-        randomWidth > left.value
-          ? [
-              -width,
-              maxHeight(
-                h +
-                  height -
-                  ((randomWidth + width) * (h + height - top.value)) /
-                    (randomWidth - left.value)
-              ),
-            ]
-          : [
-              maxWidth(
-                randomWidth +
-                  ((h + 2 * height) * (left.value - randomWidth)) /
-                    (h + height - top.value)
-              ),
-              -height,
-            ],
-      2:
-        randomHeight > top.value
-          ? [
-              maxWidth(
-                ((randomHeight + height) * (left.value + width)) /
-                  (randomHeight - top.value) -
-                  width
-              ),
-              -height,
-            ]
-          : [
-              maxWidth(
-                ((h + height - randomHeight) * (left.value + width)) /
-                  (top.value - randomHeight) -
-                  width
-              ),
-              height + h,
-            ],
-      3:
-        randomHeight > top.value
-          ? [
-              maxWidth(
-                width +
-                  w -
-                  ((randomHeight + height) * (w + width - left.value)) /
-                    (randomHeight - top.value)
-              ),
-              -height,
-            ]
-          : [
-              maxWidth(
-                w +
-                  width -
-                  ((h + height - randomHeight) * (w + width - left.value)) /
-                    (top.value - randomHeight)
-              ),
-              h + height,
-            ],
-    };
-    return end[random];
+  if (times.value > 60)
+    speed.value++
+  if (blood.value < 100)
+    blood.value += 1
+  let [lat1, lng1] = getStartPosition(random)
+  const initialStatus = `left:${lat1}px;top:${lng1}px;position:absolute;`
+  div.setAttribute('style', initialStatus)
+  let flag = false
+  let flag1 = false
+  useIntersectionObserver(
+    div,
+    ([{ isIntersecting }, observeable]) => {
+      if (isIntersecting)
+        flag = true
+      if (observeable)
+        flag1 = true
+      if (flag && !isIntersecting)
+        removeElement(div)
+      if (flag1 && !observeable)
+        removeElement(div)
+    },
+    {},
+  )
+
+  const [directionX, directionY] = getDirection()
+  const stop = animationFrameWrapper(() => {
+    if (!status.value)
+      return stop()
+    gameover()
+    lat1 += speed.value * directionX
+    lng1 += speed.value * directionY
+    div.style.left = `${lat1}px`
+    div.style.top = `${lng1}px`
+  }, 0.01)
+  addEventListener(div, 'mousemove', gameover)
+
+  insertElement('main', div, null)
+
+  function getRandomWidth(): number {
+    const result = Math.random() * (w + 2 * width) - width
+    if (result < 100)
+      return getRandomWidth()
+    return result
   }
+  function getRandomHeight(): number {
+    const result = Math.random() * (h + 2 * height) - h
+    if (result < 100)
+      return getRandomWidth()
+    return result
+  }
+
   function getStartPosition(random: number): number[] {
     const start: Record<number, number[]> = {
       0: [randomWidth, -height],
       1: [randomWidth, height + h],
       2: [-width, randomHeight],
       3: [width + w, randomHeight],
-    };
-    return start[random];
-  }
-
-  function maxHeight(data: number) {
-    return data > 0 ? Math.min(data, h + height) : Math.max(data, -height);
-  }
-  function maxWidth(data: number) {
-    return data > 0 ? Math.min(data, w + width) : Math.max(data, -width);
-  }
-  const [lat2, lng2] = getEndPosition(random);
-  const distanceX = lat2 - lat1;
-  const distanceY = lng2 - lng1;
-  useIntersectionObserver(div, ([{ isIntersecting }, observerElement]) => {
-    if (!observerElement) removeElement(div);
-  });
-  const stop = animationFrameWrapper(() => {
-    if (!status.value) return stop();
-    lat1 += distanceX / 100;
-    lng1 += distanceY / 100;
-    div.style.left = `${lat1}px`;
-    div.style.top = `${lng1}px`;
-  }, 100 / level.value);
-  const stop1 = animationFrameWrapper(() => {
-    if (!status.value) return stop1();
-    if (collisionDetection(div, ".target")) {
-      blood.value -= 20;
-      if (blood.value <= 0) {
-        status.value = false;
-        setTimeout(() => {
-          alert(`game over ! lasted ${times.value} seconds`);
-          over();
-        });
-      }
-      return stop();
     }
-  }, 0.01);
-
-  insertElement("main", div, null);
-
-  function getRandomWidth() {
-    const result = Math.random() * (w + 2 * width) - width;
-    if (result < 100) return getRandomWidth();
-    return result;
+    return start[random]
   }
-  function getRandomHeight() {
-    const result = Math.random() * (h + 2 * height) - h;
-    if (result < 100) return getRandomWidth();
-    return result;
+  function sqrt(x: number, y: number) {
+    return Math.sqrt(x * x + y * y)
+  }
+  function getDirection() {
+    const symbolX
+      = random === 0 || random === 1
+        ? randomWidth - left.value > 0
+          ? -1
+          : 1
+        : random === 2
+          ? 1
+          : -1
+
+    const symbolY
+      = random === 0
+        ? 1
+        : random === 1
+          ? -1
+          : randomHeight - top.value > 0
+            ? -1
+            : 1
+    if (random === 0) {
+      return [
+        symbolX
+          * Math.abs(
+            (randomWidth - left.value)
+              / sqrt(randomWidth - left.value, top.value + height / 2),
+          ),
+        symbolY
+          * Math.abs(
+            (top.value + height / 2)
+              / sqrt(left.value - randomWidth, top.value + height / 2),
+          ),
+      ]
+    }
+    if (random === 1) {
+      return [
+        symbolX
+          * Math.abs(
+            (randomWidth - left.value)
+              / sqrt(randomWidth - left.value, h - top.value + height / 2),
+          ),
+        symbolY
+          * Math.abs(
+            (h - top.value + height / 2)
+              / sqrt(left.value - randomWidth, h - top.value + height / 2),
+          ),
+      ]
+    }
+    if (random === 2) {
+      return [
+        symbolX
+          * Math.abs(
+            (left.value + width / 2)
+              / sqrt(left.value + width / 2, top.value - randomHeight),
+          ),
+        symbolY
+          * Math.abs(
+            (top.value - randomHeight)
+              / sqrt(left.value + width / 2, top.value - randomHeight),
+          ),
+      ]
+    }
+    return [
+      symbolX
+        * Math.abs(
+          (w - left.value + width / 2)
+            / sqrt(w - left.value + width / 2, top.value - randomHeight),
+        ),
+      symbolY
+        * Math.abs(
+          (top.value - randomHeight)
+            / sqrt(w - left.value + width / 2, top.value - randomHeight),
+        ),
+    ]
+  }
+  function gameover() {
+    if (!status.value)
+      return
+    if (collisionDetection(div, '.target')) {
+      blood.value -= 20
+      removeElement(div)
+      if (blood.value <= 0) {
+        status.value = false
+        clearInterval(timer)
+        setTimeout(() => {
+          alert(`game over ! lasted ${times.value} seconds`)
+          over()
+        })
+      }
+    }
   }
 }
 
-onMounted(() => {
-  over = animationFrameWrapper(() => {
-    const len = findElement(".blocks", true)!.length;
-    if (len <= 10) generateObject();
-  }, 1000);
-});
-
 function isStr(o: any): o is string {
-  return typeof o === "string";
+  return typeof o === 'string'
 }
 
 const bloodColor = computed(() => {
-  if (blood.value >= 80) return "bg-green";
-  if (blood.value >= 60) return "bg-yellow";
-  return "bg-red";
-});
+  if (blood.value >= 80)
+    return 'bg-green'
+  if (blood.value >= 60)
+    return 'bg-yellow'
+  return 'bg-red'
+})
 </script>
 
 <template>
   <main
     ref="main"
     font-sans
-    p="x-4 y-10"
     h-full
     text="center gray-700 dark:gray-200"
+    overflow-hidden
   >
     <div w-100 border-1 border-lightgray border-rd-2 h-2 relative ma text-1>
       <div
