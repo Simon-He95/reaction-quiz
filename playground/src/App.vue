@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { onMounted } from '@vue/runtime-core'
 import {
-  addEventListener,
-  animationFrameWrapper,
   collisionDetection,
   createElement,
   findElement,
   insertElement,
   removeElement,
+  useAnimationFrame,
+  useEventListener,
   useIntersectionObserver,
-} from 'simon-js-tool'
+} from 'lazy-js-utils'
 import { computed, ref } from 'vue'
 import { blocks } from './ball'
 const top = ref(0)
@@ -29,7 +28,7 @@ const mousemove = (e: MouseEvent) => {
   if (start)
     return
   start = true
-  over = animationFrameWrapper(() => {
+  over = useAnimationFrame(() => {
     const len = (findElement('.blocks', true) as NodeListOf<Element>).length
     if (len <= 10)
       generateObject()
@@ -38,7 +37,7 @@ const mousemove = (e: MouseEvent) => {
     times.value++
   }, 1000)
 }
-addEventListener(document, 'mousemove', mousemove)
+useEventListener(document, 'mousemove', mousemove)
 const w = window.innerWidth
 const h = window.innerHeight
 function generateObject() {
@@ -92,7 +91,7 @@ function generateObject() {
   )
 
   const [directionX, directionY] = getDirection()
-  const stop = animationFrameWrapper(() => {
+  const stop = useAnimationFrame(() => {
     if (!status.value)
       return stop()
     gameover()
@@ -101,7 +100,7 @@ function generateObject() {
     div.style.left = `${lat1}px`
     div.style.top = `${lng1}px`
   }, 0.01)
-  addEventListener(div, 'mousemove', gameover)
+  useEventListener(div, 'mousemove', gameover)
 
   insertElement('main', div, null)
 
@@ -141,13 +140,7 @@ function generateObject() {
           : -1
 
     const symbolY
-      = random === 0
-        ? 1
-        : random === 1
-          ? -1
-          : randomHeight - top.value > 0
-            ? -1
-            : 1
+      = random === 0 ? 1 : random === 1 ? -1 : randomHeight - top.value > 0 ? -1 : 1
     if (random === 0) {
       return [
         symbolX
@@ -235,13 +228,7 @@ const bloodColor = computed(() => {
 </script>
 
 <template>
-  <main
-    ref="main"
-    font-sans
-    h-full
-    text="center gray-700 dark:gray-200"
-    overflow-hidden
-  >
+  <main ref="main" font-sans h-full text="center gray-700 dark:gray-200" overflow-hidden>
     <div w-100 border-1 border-lightgray border-rd-2 h-2 relative ma text-1>
       <div
         :class="[bloodColor]"
@@ -275,5 +262,4 @@ const bloodColor = computed(() => {
   </main>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>
