@@ -1,5 +1,5 @@
 <span><div align="center">![img](/assets//logo.jpg)</div></span>
-<span><div align="center">[Reaction Quiz](https://reaction-quiz.vercel.app/)</div></span>
+<span><div align="center">[Reaction Quiz](https://reaction-quiz.netlify.app/)</div></span>
 
 锻炼反应的鼠标小游戏，待完善...
 
