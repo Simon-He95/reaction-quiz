@@ -79,6 +79,10 @@ function mousemove(e: MouseEvent) {
   })
   timer = setInterval(() => {
     times.value++
+
+    // 每秒回复1%血量，但不超过100%
+    if (blood.value < 100)
+      blood.value += 1
   }, 1000)
 }
 useEventListener(document, 'mousemove', mousemove)
@@ -118,7 +122,12 @@ function generateObject() {
   if (difficulty.value === 'difficult') {
     // 40%的几率生成更大的球
     if (Math.random() > 0.6) {
-      scaleFactor = 1 + Math.random() * 1.5 // 放大1-2.5倍之间
+      // 根据游戏时间动态调整最大缩放倍数
+      // 初始最大倍数为2.5，随着时间增加到最大5倍
+      const maxScale = Math.min(2.5 + (times.value / 60) * 2.5, 5.0)
+
+      // 计算当前的缩放因子，范围在1到maxScale之间
+      scaleFactor = 1 + Math.random() * (maxScale - 1)
       width *= scaleFactor
       height *= scaleFactor
     }
@@ -128,8 +137,7 @@ function generateObject() {
   const randomHeight = getRandomHeight() + height / 2
   if (times.value > 60)
     speed.value++
-  if (blood.value < 100)
-    blood.value += 1
+
   let [lat1, lng1] = getStartPosition(random)
   const initialStatus = `left:${lat1}px;top:${lng1}px;position:absolute;${scaleFactor !== 1 ? `transform:scale(${scaleFactor});` : ''}`
   div.setAttribute('style', initialStatus)
