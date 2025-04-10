@@ -31,6 +31,7 @@ const blood = ref(100)
 const speed = ref(8)
 const isHit = ref(false)
 const difficulty = ref('simple') // 'simple' 或 'difficult'
+const isMobile = ref(false) // 添加到顶部的ref声明
 
 const target = ref<HTMLElement>()
 let start = false
@@ -58,32 +59,25 @@ onMounted(() => {
 
   // 加载排名
   loadRankings()
+
+  // 设置触摸事件
+  setupTouchEvents()
+
+  // 添加设备检测并显示合适的游戏说明
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  isMobile.value = isMobileDevice
 })
 
 function mousemove(e: MouseEvent) {
-  top.value = e.y - target.value!.offsetWidth / 2
-  left.value = e.x - target.value!.offsetHeight / 2
+  if (!target.value)
+    return
+  top.value = e.y - target.value.offsetWidth / 2
+  left.value = e.x - target.value.offsetHeight / 2
+
   if (start)
     return
-  start = true
-  over = useRaf(() => {
-    const len = (findElement('.blocks', true) as NodeListOf<Element>).length
-    if (len <= 10) {
-      // Generate more balls as time increases
-      const objectsToGenerate = Math.min(Math.floor(times.value / 15) + 1, 5)
-      for (let i = 0; i < objectsToGenerate; i++)
-        generateObject()
-    }
-  }, {
-    delta: 2000,
-  })
-  timer = setInterval(() => {
-    times.value++
 
-    // 每秒回复1%血量，但不超过100%
-    if (blood.value < 100)
-      blood.value += 1
-  }, 1000)
+  startGameLogic()
 }
 useEventListener(document, 'mousemove', mousemove)
 const w = window.innerWidth
@@ -387,6 +381,57 @@ function loadRankings() {
     console.error('Error loading rankings:', error)
   }
 }
+
+// 添加触摸事件支持
+function setupTouchEvents() {
+  // 触摸开始时记录位置并设置状态
+  useEventListener('main', 'touchstart', (e) => {
+    // 防止页面滚动
+    if (!target.value)
+      return
+    const touch = e.touches[0]
+    top.value = touch.clientY - target.value.offsetWidth / 2
+    left.value = touch.clientX - target.value.offsetHeight / 2
+
+    // 如果游戏还没开始，则开始游戏
+    if (!start) {
+      startGameLogic()
+    }
+  })
+
+  // 触摸移动时更新位置
+  useEventListener('main', 'touchmove', (e) => {
+    // 防止页面滚动
+    if (!target.value)
+      return
+    const touch = e.touches[0]
+    top.value = touch.clientY - target.value.offsetWidth / 2
+    left.value = touch.clientX - target.value.offsetHeight / 2
+  })
+}
+
+// 抽取游戏开始逻辑为单独函数，以便在鼠标和触摸事件中重用
+function startGameLogic() {
+  start = true
+  over = useRaf(() => {
+    const len = (findElement('.blocks', true) as NodeListOf<Element>).length
+    if (len <= 10) {
+      // Generate more balls as time increases
+      const objectsToGenerate = Math.min(Math.floor(times.value / 15) + 1, 5)
+      for (let i = 0; i < objectsToGenerate; i++)
+        generateObject()
+    }
+  }, {
+    delta: 2000,
+  })
+  timer = setInterval(() => {
+    times.value++
+
+    // 每秒回复1%血量，但不超过100%
+    if (blood.value < 100)
+      blood.value += 1
+  }, 1000)
+}
 </script>
 
 <template>
@@ -398,7 +443,9 @@ function loadRankings() {
           反应力测试
         </h1>
         <p class="game-subtitle">
-          测试你的反应速度！避开所有的球体！
+          测试你的反应速度！避开所有的球体！ <br>
+          <span v-if="isMobile" class="device-tip">按住屏幕并移动以控制角色</span>
+          <span v-else class="device-tip">使用鼠标移动来控制角色</span>
         </p>
         <div class="player-input">
           <input v-model="playerName" type="text" placeholder="输入你的名字" class="name-input">
@@ -993,5 +1040,13 @@ function loadRankings() {
   .high-score-banner .trophy {
     font-size: 2rem;
     margin-right: 0.5rem;
+  }
+
+  .device-tip {
+    display: block;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    color: #6b7280;
+    font-style: italic;
   }
 </style>
